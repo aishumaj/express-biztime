@@ -18,7 +18,7 @@ router.get("/", async function (req, res, next) {
 });
 
 
-/** GET /[code] - return data about one company: 
+/** GET /[code] - return data about one company:
  *  `{company: {code, name, description}}` */
 
 router.get("/:code", async function (req, res, next) {
@@ -32,7 +32,7 @@ router.get("/:code", async function (req, res, next) {
 });
 
 
-/** POST / - create company from data; 
+/** POST / - create company from data;
  * return `{company: {code, name, description}}` */
 
 router.post("/", async function (req, res, next) {
@@ -47,36 +47,38 @@ router.post("/", async function (req, res, next) {
 });
 
 
-// /** PATCH /[code] - update fields in cat; return `{cat: cat}` */
+/** PUT /[code] - update fields in existing company;
+ *  return `{company: {code, name, description}}` */
 
-// router.patch("/:code", async function (req, res, next) {
-//   if ("code" in req.body) throw new BadRequestError("Not allowed");
+router.put("/:code", async function (req, res, next) {
+  if ("code" in req.body) throw new BadRequestError("Not allowed");
 
-//   const code = req.params.code;
-//   const results = await db.query(
-//     `UPDATE cats
-//          SET name=$1
-//          WHERE code = $2
-//          RETURNING code, name`,
-//     [req.body.name, code]);
-//   const cat = results.rows[0];
+  const {name, description} = req.body;
+  const results = await db.query(
+    `UPDATE companies
+         SET name=$1,
+          description = $2
+         WHERE code = $3
+         RETURNING code, name, description`,
+    [name, description, req.params.code]);
+  const company = results.rows[0];
 
-//   if (!cat) throw new NotFoundError(`No matching cat: ${code}`);
-//   return res.json({ cat });
-// });
+  if (!company) throw new NotFoundError(`No matching company: ${code}`);
+  return res.json({ company });
+});
 
 
-// /** DELETE /[code] - delete cat, return `{message: "Cat deleted"}` */
+/** DELETE /[code] - delete company, return `{status: "deleted"}` */
 
-// router.delete("/:code", async function (req, res, next) {
-//   const code = req.params.code;
-//   const results = await db.query(
-//     "DELETE FROM cats WHERE code = $1 RETURNING code", [code]);
-//   const cat = results.rows[0];
+router.delete("/:code", async function (req, res, next) {
+  const code = req.params.code;
+  const results = await db.query(
+    "DELETE FROM companies WHERE code = $1 RETURNING code", [code]);
+  const company = results.rows[0];
 
-//   if (!cat) throw new NotFoundError(`No matching cat: ${code}`);
-//   return res.json({ message: "Cat deleted" });
-// });
+  if (!company) throw new NotFoundError(`No matching company: ${code}`);
+  return res.json({ status: "deleted" });
+});
 
 
 module.exports = router;
