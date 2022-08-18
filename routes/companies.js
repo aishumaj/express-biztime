@@ -12,9 +12,8 @@ const db = require("../db");
 ` */
 
 router.get("/", async function (req, res, next) {
-  //need back ticks
   const results = await db.query(
-    "SELECT code, name FROM companies ORDER BY code"
+    `SELECT code, name FROM companies ORDER BY code`
   );
   const companies = results.rows;
 
@@ -22,7 +21,7 @@ router.get("/", async function (req, res, next) {
 });
 
 /** GET /[code] - return data about one company:
- *  `{company: {code, name, description}}` */
+ *  `{company: {code, name, description, invoices: [id,...]}}` */
 
 router.get("/:code", async function (req, res, next) {
   const code = req.params.code;
@@ -33,6 +32,13 @@ router.get("/:code", async function (req, res, next) {
   const company = results.rows[0];
 
   if (!company) throw new NotFoundError(`No matching company: ${code}`);
+
+  const invoices = await db.query(
+    "SELECT id FROM invoices WHERE comp_code = $1", [code]
+  );
+
+  company.invoices = invoices.rows.map(r => r.id);
+
   return res.json({ company });
 });
 
