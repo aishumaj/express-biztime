@@ -79,7 +79,7 @@ router.put("/:code", async function (req, res, next) {
     [name, description, code]
   );
   const company = results.rows[0];
-
+  
   if (!company) throw new NotFoundError(`No matching company: ${code}`);
   return res.json({ company });
 });

@@ -14,8 +14,8 @@ beforeEach(async function () {
     VALUES ('test1', 'Test Company 1', 'This is a test')
     RETURNING code, name, description`);
   testCompany = result.rows[0];
+  testCompany.invoices = [];
 });
-
 
 /** GET /companies - returns `{companies: [{code, name}, ...]}}` */
 
@@ -23,82 +23,90 @@ describe("GET /companies", function () {
   test("Gets a list of 1 company", async function () {
     const resp = await request(app).get(`/companies`);
     expect(resp.body).toEqual({
-      companies: [{code: testCompany.code, name: testCompany.name}],
+      companies: [{ code: testCompany.code, name: testCompany.name }],
     });
   });
 });
 // end
 
+/** GET /companies/[code] - return data about one company: `{company: company}` */
 
-// /** GET /cats/[id] - return data about one cat: `{cat: cat}` */
+describe("GET /companies/:code", function () {
+  test("Gets single company", async function () {
+    const resp = await request(app).get(`/companies/${testCompany.code}`);
+    expect(resp.body).toEqual({ company: testCompany });
+  });
 
-// describe("GET /cats/:id", function () {
-//   test("Gets single cat", async function () {
-//     const resp = await request(app).get(`/cats/${testCat.id}`);
-//     expect(resp.body).toEqual({ cat: testCat });
-//   });
-
-//   test("Respond with 404 if not found", async function () {
-//     const resp = await request(app).get(`/cats/0`);
-//     expect(resp.statusCode).toEqual(404);
-//   });
-// });
+  test("Respond with 404 if not found", async function () {
+    const resp = await request(app).get(`/companies/0`);
+    expect(resp.statusCode).toEqual(404);
+  });
+});
 // // end
 
+/** POST /companies - create company from data;
+ * return `{company: {code, name, description}}` */
 
-// /** POST /cats - create cat from data; return `{cat: cat}` */
-
-// describe("POST /cats", function () {
-//   test("Create new cat", async function () {
-//     const resp = await request(app)
-//         .post(`/cats`)
-//         .send({ name: "Ezra" });
-//     expect(resp.statusCode).toEqual(201);
-//     expect(resp.body).toEqual({
-//       cat: { id: expect.any(Number), name: "Ezra" },
-//     });
-//   });
-// });
+describe("POST /companies", function () {
+  const test2 = {
+    name: "Test Company 2",
+    code: "test2",
+    description: "Test 2 Description",
+  };
+  test("Create new company", async function () {
+    const resp = await request(app).post(`/companies`).send(test2);
+    expect(resp.statusCode).toEqual(201);
+    expect(resp.body).toEqual({ company: test2 });
+  });
+});
 // // end
 
+/** PUT /companies/[code] - update company;
+ * return `{company: {code, name, description}}` */
 
-// /** PATCH /cats/[id] - update cat; return `{cat: cat}` */
+describe("PUT /companies/:code", function () {
+  test("Update a single company", async function () {
+    const resp = await request(app)
+      .put(`/companies/${testCompany.code}`)
+      .send({ name: "Troll", description: "Based under bridge" });
+    expect(resp.statusCode).toEqual(200);
+    expect(resp.body).toEqual({
+      company: {
+        code: testCompany.code,
+        name: "Troll",
+        description: "Based under bridge",
+      },
+    });
+  });
 
-// describe("PATCH /cats/:id", function () {
-//   test("Update a single cat", async function () {
-//     const resp = await request(app)
-//         .patch(`/cats/${testCat.id}`)
-//         .send({ name: "Troll" });
-//     expect(resp.statusCode).toEqual(200);
-//     expect(resp.body).toEqual({
-//       cat: { id: testCat.id, name: "Troll" },
-//     });
-//   });
-
-//   test("Respond with 404 if nout found", async function () {
-//     const resp = await request(app).patch(`/cats/0`);
-//     expect(resp.statusCode).toEqual(404);
-//   });
-// });
+  test("Respond with 404 if not found", async function () {
+    const resp = await request(app)
+    .put(`/companies/0`)
+    .send({ name: "Troll", description: "Based under bridge" });
+    debugger;
+    expect(resp.statusCode).toEqual(404);
+  });
+});
 // // end
 
+/** DELETE /companies/[code] - delete company,
+ *  return `{status: "deleted"}` */
 
-// /** DELETE /cats/[id] - delete cat,
-//  *  return `{message: "Cat deleted"}` */
+describe("DELETE /companies/:code", function () {
+  test("Delete a single company", async function () {
+    const resp = await request(app).delete(`/companies/${testCompany.code}`);
+    expect(resp.statusCode).toEqual(200);
+    expect(resp.body).toEqual({ status: "deleted" });
+  });
 
-// describe("DELETE /cats/:id", function () {
-//   test("Delete single a cat", async function () {
-//     const resp = await request(app)
-//         .delete(`/cats/${testCat.id}`);
-//     expect(resp.statusCode).toEqual(200);
-//     expect(resp.body).toEqual({ message: "Cat deleted" });
-//   });
-// });
+  test("Respond with 404 if not found", async function () {
+    const resp = await request(app).delete(`/companies/0`);
+    expect(resp.statusCode).toEqual(404);
+  });
+});
 // // end
-
 
 afterAll(async function () {
   // close db connection --- if you forget this, Jest will hang
   await db.end();
 });
-
