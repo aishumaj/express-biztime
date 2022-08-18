@@ -54,7 +54,7 @@ router.get("/:id", async function (req, res, next) {
 });
 
 
-/** POST / - create invoice from data;
+/** POST / - create invoice from data input { comp_code, amt };
  * return `{invoice: {id, comp_code, amt, paid, add_date, paid_date}}` */
 
 router.post("/", async function (req, res, next) {
@@ -71,26 +71,23 @@ router.post("/", async function (req, res, next) {
 });
 
 
-/** PUT /[id] - update fields in existing invoice;
+/** PUT /[id] - update fields in existing invoice
+ *  with input { amt };
  *  return `{invoice: {id, comp_code, amt, paid, add_date, paid_date}}` */
 
-router.put("/:id", async function (req, res, next) {
+router.patch("/:id", async function (req, res, next) {
   if ("id" in req.body) throw new BadRequestError("ID must be a URL parameter."
   );
 
   const id = req.params.id;
-  const { comp_code, amt, paid, add_date, paid_date } = req.body;
+  const amt = req.body.amt;
 
   const results = await db.query(
     `UPDATE invoices
-         SET comp_code=$1,
-          amt = $2,
-          paid = $3,
-          add_date = $4,
-          paid_date = $5
-         WHERE id = $6
+         SET amt=$1
+         WHERE id = $2
          RETURNING id, comp_code, amt, paid, add_date, paid_date`,
-    [comp_code, amt, paid, add_date, paid_date, id]);
+    [amt, id]);
   const invoice = results.rows[0];
 
   if (!invoice) throw new NotFoundError(`No matching invoice: ${id}`);
@@ -102,6 +99,7 @@ router.put("/:id", async function (req, res, next) {
 
 router.delete("/:id", async function (req, res, next) {
   const id = req.params.id;
+
   const results = await db.query(
     "DELETE FROM invoices WHERE id = $1 RETURNING id", [id]);
   const invoice = results.rows[0];
