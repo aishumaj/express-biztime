@@ -37,7 +37,7 @@ router.get("/:id", async function (req, res, next) {
   );
   const invoice = invoices.rows[0];
 
-  if (!invoice) throw new NotFoundError(`No matching company: ${code}`);
+  if (!invoice) throw new NotFoundError(`No matching company: ${id}`);
 
   const compCode = invoice.comp_code;
   const companies = await db.query(

@@ -6,99 +6,127 @@ const app = require("../app");
 const db = require("../db");
 
 let testCompany;
+let testInvoice;
 
 beforeEach(async function () {
   await db.query("DELETE FROM companies");
-  let result = await db.query(`
+  await db.query("DELETE FROM invoices");
+
+  let cResult = await db.query(`
     INSERT INTO companies (code, name, description)
     VALUES ('test1', 'Test Company 1', 'This is a test')
     RETURNING code, name, description`);
-  testCompany = result.rows[0];
-  testCompany.invoices = [];
+  testCompany = cResult.rows[0];
+
+  let iResult = await db.query(`
+    INSERT INTO invoices(comp_code, amt, add_date)
+    VALUES('test1', 500, '2022-08-18')
+    RETURNING id, comp_code, amt, paid, add_date, paid_date`);
+  testInvoice = iResult.rows[0];
 });
 
-/** GET /companies - returns `{companies: [{code, name}, ...]}}` */
+/** GET /invoices - returns `{invoices: [{id, comp_code}, ...]}` */
 
-describe("GET /companies", function () {
-  test("Gets a list of 1 company", async function () {
-    const resp = await request(app).get(`/companies`);
+describe("GET /invoices", function () {
+  test("Gets a list of 1 invoice", async function () {
+    const resp = await request(app).get(`/invoices`);
     expect(resp.body).toEqual({
-      companies: [{ code: testCompany.code, name: testCompany.name }],
+      invoices:  [{id: testInvoice.id, comp_code: testInvoice.comp_code}]
     });
   });
 });
 // end
 
-/** GET /companies/[code] - return data about one company: `{company: company}` */
+/** GET /invoices/[id] - return data about one invoice:
+ * `{invoice: {id, amt, paid, add_date, paid_date,
+ * company: {code, name, description}}` */
 
-describe("GET /companies/:code", function () {
-  test("Gets single company", async function () {
-    const resp = await request(app).get(`/companies/${testCompany.code}`);
-    expect(resp.body).toEqual({ company: testCompany });
+describe("GET /invoices/:id", function () {
+  test("Gets single invoice", async function () {
+    const resp = await request(app).get(`/invoices/${testInvoice.id}`);
+    expect(resp.body).toEqual({ invoice: {
+      id: testInvoice.id,
+        amt: testInvoice.amt,
+        paid: testInvoice.paid,
+        add_date: '2022-08-18T07:00:00.000Z',
+        paid_date: null,
+        company: testCompany
+    } });
   });
 
   test("Respond with 404 if not found", async function () {
-    const resp = await request(app).get(`/companies/0`);
+    const resp = await request(app).get(`/invoices/0`);
     expect(resp.statusCode).toEqual(404);
   });
 });
-// // end
 
-/** POST /companies - create company from data;
- * return `{company: {code, name, description}}` */
+// end
 
-describe("POST /companies", function () {
-  const test2 = {
-    name: "Test Company 2",
-    code: "test2",
-    description: "Test 2 Description",
+/** POST /invoices - create invoice from data input {comp_code, amt};
+ * return `{invoice: {id, comp_code, amt, paid, add_date, paid_date}}` */
+
+describe("POST /invoices", function () {
+  const invoice2= {
+    comp_code:"test1",
+    amt: 200,
+    add_date: "2022-08-18"
   };
-  test("Create new company", async function () {
-    const resp = await request(app).post(`/companies`).send(test2);
+
+  test("Create new invoice", async function () {
+    const resp = await request(app).post(`/invoices`).send(invoice2);
     expect(resp.statusCode).toEqual(201);
-    expect(resp.body).toEqual({ company: test2 });
+    expect(resp.body).toEqual({ invoice: {
+      id: expect.any(Number),
+      comp_code: "test1",
+      amt: "200.00",
+      paid: false,
+      add_date: "2022-08-18T07:00:00.000Z",
+      paid_date: null
+    } });
   });
 });
-// // end
+// end
 
-/** PUT /companies/[code] - update company;
- * return `{company: {code, name, description}}` */
+/** PATCH /invoices/[id] - update invoice with input { amt };
+ * return `{invoice: {id, comp_id, amt, paid, add_date, paid_date}}` */
 
-describe("PUT /companies/:code", function () {
-  test("Update a single company", async function () {
+describe("PATCH /invoices/:id", function () {
+  test("Update a single invoice", async function () {
     const resp = await request(app)
-      .put(`/companies/${testCompany.code}`)
-      .send({ name: "Troll", description: "Based under bridge" });
+      .patch(`/invoices/${testInvoice.id}`)
+      .send({ amt: 1000 });
     expect(resp.statusCode).toEqual(200);
     expect(resp.body).toEqual({
-      company: {
-        code: testCompany.code,
-        name: "Troll",
-        description: "Based under bridge",
+      invoice: {
+        id: testInvoice.id,
+        comp_code: "test1",
+        amt: "1000.00",
+        paid: false,
+        add_date: "2022-08-18T07:00:00.000Z",
+        paid_date: null
       },
     });
   });
 
   test("Respond with 404 if not found", async function () {
-    const resp = await request(app).put(`/companies/0`);
-    debugger;
+    const resp = await request(app).patch(`/invoices/0`).send({amt:1000});
     expect(resp.statusCode).toEqual(404);
   });
 });
-// // end
+// end
 
-/** DELETE /companies/[code] - delete company,
+/** DELETE /invoices/[id] - delete invoice,
  *  return `{status: "deleted"}` */
 
-describe("DELETE /companies/:code", function () {
+describe("DELETE /invoices/:id", function () {
   test("Delete a single company", async function () {
-    const resp = await request(app).delete(`/companies/${testCompany.code}`);
+    const resp = await request(app).delete(`/invoices/${testInvoice.id}`);
     expect(resp.statusCode).toEqual(200);
     expect(resp.body).toEqual({ status: "deleted" });
   });
 
   test("Respond with 404 if not found", async function () {
-    const resp = await request(app).delete(`/companies/0`);
+    const resp = await request(app).delete(`/invoices/0`);
     expect(resp.statusCode).toEqual(404);
   });
 });
